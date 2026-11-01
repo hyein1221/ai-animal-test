@@ -109,10 +109,10 @@ function showResult(){const {scores}=scoreAnswers(answers);const t=BY_ID[selecte
 }
 function renderCollective(standalone){
  const total=TYPES.reduce((sum,t)=>sum+(counts[t.id]||0),0);
- const max=Math.max(1,...TYPES.map(t=>counts[t.id]||0));
+ // 같은 유형의 결과가 증가하면 다른 유형 수와 상관없이 비눗방울이 점점 커집니다.
  return `<section class="collective ${standalone?'live-only':''}" aria-label="전체 참여자 결과 분포"><div class="collective-head"><h2>우리의 AI 동물 비눗방울 🫧</h2>${connected && !demoMode?'<span class="live-pill">실시간 집계</span>':''}</div>
  <div class="status-line" id="status-line">${esc(statsStatus)}</div>
- <div class="bubbles" id="bubble-board">${TYPES.map((t,i)=>{const c=counts[t.id]||0;const size=54+Math.round(88*Math.sqrt(c/max));return `<div class="bubble-cell ${total&&c===max?'is-leader':''}"><div class="bubble" style="--bubble-tint:${t.tint};--bubble-size:${size}px;--float-dur:${3.2+i*.39}s" aria-label="${esc(t.name)} ${c}개 결과">${iconPet(t)}<span class="bubble-number">${c}개</span></div><div class="bubble-caption">${esc(t.name)}</div></div>`;}).join('')}</div>
+ <div class="bubbles" id="bubble-board">${TYPES.map((t,i)=>{const c=counts[t.id]||0;const size=54+Math.round(100*(1-Math.exp(-c/12)));return `<div class="bubble-cell ${total&&c===max?'is-leader':''}"><div class="bubble" style="--bubble-tint:${t.tint};--bubble-size:${size}px;--float-dur:${3.2+i*.39}s" aria-label="${esc(t.name)} ${c}개 결과">${iconPet(t)}<span class="bubble-number">${c}개</span></div><div class="bubble-caption">${esc(t.name)}</div></div>`;}).join('')}</div>
  <div class="total-line">총 <span id="grand-total">${total}</span>개의 결과가 모였어요</div>
  <div class="stat-grid" id="stat-grid">${TYPES.map(t=>{const c=counts[t.id]||0;const pct=total?Math.round(c/total*100):0;return `<div class="stat-row"><div class="stat-name">${esc(t.name)}</div><div class="stat-track"><div class="stat-fill" style="--bar-color:${t.bar};width:${pct}%"></div></div><div class="stat-amount">${c}개 · ${pct}%</div></div>`;}).join('')}</div>
  <p class="privacy-note">이름, 연락처, 개별 문항 응답은 수집하지 않아요. 대표 동물별 누적 결과 수만 집계해요.<br>동일한 브라우저에서는 중복 집계를 줄이지만, 사람 수를 정확히 식별하는 통계는 아니에요.</p>
