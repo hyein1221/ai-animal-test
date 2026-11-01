@@ -5,6 +5,6 @@
  * secret / service_role 키는 절대 이 파일에 넣으면 안 됩니다.
  */
 window.ANIMAL_APP_CONFIG = {
-  supabaseUrl: "",
+  supabaseUrl: "https://hvfebndoiisujcehuknf.supabase.co",
   supabasePublishableKey: "sb_publishable_FoHzWH0mCUVvoXNV98v6sw_smnBznUZ"
 };
