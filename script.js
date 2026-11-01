@@ -99,6 +99,7 @@ function showResult(){const {scores}=scoreAnswers(answers);const t=BY_ID[selecte
  <p class="body-text">${second.length>1?'보조 성향이 동점으로 나타났어요. 모두 같은 비중으로 살펴봐 주세요.':'대표 성향 외에도 또 다른 활용 관점이 함께 나타났어요.'}</p>
  </div><div class="reflection"><strong>어떤 동물이 나왔든 괜찮아요!</strong><p>AI를 활용하는 방식은 서로 달라도 괜찮아요. 중요한 것은 얼마나 자주 사용하는지가 아니라, 언제·왜·어떻게 활용할지 판단하는 것입니다.</p></div>
  <div class="actions"><button class="button" id="save-image">결과 이미지 저장하기 ↓</button><button class="button secondary" id="retest">다시 검사하기 ↺</button></div>
+ <div class="submission-status" id="submission-status" role="status" aria-live="polite">전체 결과 반영 상태를 확인하고 있어요.</div>
  <div class="result-disclaimer">이 결과는 재미와 자기성찰을 위한 비공식 유형 테스트입니다.<br>개인의 AI 리터러시나 교사 전문성을 평가한 결과가 아닙니다.</div>
  <div id="collective-slot"></div></section>`;
  document.getElementById('save-image').onclick=()=>saveResultImage(t,second);
@@ -121,31 +122,98 @@ function renderCollective(standalone){
 function showLiveOnly(){cleanupLive();ROOT.innerHTML=`<div class="content separate-live"><div id="collective-slot">${renderCollective(true)}</div></div>`;document.getElementById('live-home').onclick=showHome;initLive();scrollTop();}
 function refreshCollective(){const slot=document.getElementById('collective-slot');if(!slot)return;const standalone=!!document.getElementById('live-home');slot.innerHTML=renderCollective(standalone);if(standalone)document.getElementById('live-home').onclick=showHome;else document.getElementById('large-live').onclick=showLiveOnly;}
 
-// ===================== Supabase: 집계만 저장 / 실시간 구독 =====================
+// ===================== Supabase: 익명 집계만 저장 / 실시간 조회 =====================
+// 브라우저에 공개 가능한 publishable key는 'apikey' 헤더에만 전달합니다.
+// 개인 식별 정보나 문항별 응답은 Supabase에 전송하지 않습니다.
 const CONFIG=window.ANIMAL_APP_CONFIG||{};
-const connected=!!(CONFIG.supabaseUrl&&CONFIG.supabasePublishableKey&&window.supabase?.createClient);
-function ensureClient(){if(!connected)return null;if(!client)client=window.supabase.createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});return client;}
-function cleanupLive(){if(refreshTimer)clearInterval(refreshTimer);refreshTimer=null;if(subscription&&client){client.removeChannel(subscription);subscription=null;}}
-async function getCounts(){if(demoMode){counts={squirrel:3,beaver:12,otter:8,owl:5,hedgehog:4,rabbit:2};statsStatus='시연용 숫자입니다. 실제 결과가 아니에요.';refreshCollective();return;}
- const db=ensureClient();if(!db){statsStatus='';refreshCollective();return;}
- try{const {data,error}=await db.from('animal_counts').select('animal,total');if(error)throw error;
-  const next=Object.fromEntries(TYPES.map(t=>[t.id,0]));for(const row of data||[]){if(Object.hasOwn(next,row.animal))next[row.animal]=Math.max(0,Number(row.total)||0);}counts=next;
-  statsStatus='';refreshCollective();
- }catch(e){console.error('stats load',e);statsStatus='집계를 불러오지 못했어요. Supabase 설정과 정책을 확인해 주세요.';refreshCollective();}
+const connected=!!(CONFIG.supabaseUrl&&CONFIG.supabasePublishableKey);
+const API_BASE=connected?CONFIG.supabaseUrl.replace(/\/$/,'')+'/rest/v1':'';
+const API_HEADERS=connected?{'apikey':CONFIG.supabasePublishableKey}:{};
+function ensureClient(){
+ if(!connected||!window.supabase?.createClient)return null;
+ if(!client)client=window.supabase.createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+ return client;
 }
-function initLive(){const db=ensureClient();if(!db&&!demoMode){getCounts();return;}getCounts();if(demoMode)return;
- subscription=db.channel('animal-counts-live')
-  .on('postgres_changes',{event:'UPDATE',schema:'public',table:'animal_counts'},()=>{getCounts();})
-  .subscribe();
- refreshTimer=setInterval(getCounts,15000);
+function setSubmitStatus(message,kind=''){
+ const el=document.getElementById('submission-status');
+ if(el){el.textContent=message;el.dataset.kind=kind;}
 }
-async function registerResultOnce(primary){if(demoMode)return;
- if(localStorage.getItem(SUBMIT_STORAGE_KEY)){note('이미 이 브라우저에서 제출한 결과가 있어 중복 집계하지 않았어요.');return;}
- const db=ensureClient();if(!db)return;if(isSubmitting)return;isSubmitting=true;
- try{const {error}=await db.rpc('record_animal',{p_animal:primary});if(error)throw error;
-  localStorage.setItem(SUBMIT_STORAGE_KEY,'1');await getCounts();
- }catch(err){console.error('submit result',err);note('유형 결과는 확인할 수 있지만, 전체 집계에는 반영되지 못했어요. 연결 상태를 확인해 주세요.');}
- finally{isSubmitting=false;}
+async function apiRequest(path,options={}){
+ if(!connected)throw new Error('설정에 프로젝트 URL 또는 공개용 키가 없습니다.');
+ const response=await fetch(API_BASE+path,{
+  method:options.method||'GET',
+  headers:{...API_HEADERS,...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})},
+  ...(options.body?{body:JSON.stringify(options.body)}:{})
+ });
+ if(!response.ok){
+   let detail='';
+   try{const data=await response.json();detail=String(data?.message||data?.hint||data?.code||'');}catch(_){}
+   const err=new Error('HTTP '+response.status+(detail?' · '+detail:''));
+   err.status=response.status;
+   throw err;
+ }
+ return options.method==='POST'?null:response.json();
+}
+function cleanupLive(){
+ if(refreshTimer)clearInterval(refreshTimer);refreshTimer=null;
+ if(subscription&&client){client.removeChannel(subscription);subscription=null;}
+}
+async function getCounts(){
+ if(demoMode){
+  counts={squirrel:3,beaver:12,otter:8,owl:5,hedgehog:4,rabbit:2};
+  statsStatus='시연용 숫자입니다. 실제 결과가 아니에요.';
+  refreshCollective();return;
+ }
+ if(!connected){
+  statsStatus='';refreshCollective();return;
+ }
+ try{
+  const data=await apiRequest('/animal_counts?select=animal,total');
+  const next=Object.fromEntries(TYPES.map(t=>[t.id,0]));
+  for(const row of data||[]){
+    if(Object.hasOwn(next,row.animal))next[row.animal]=Math.max(0,Number(row.total)||0);
+  }
+  counts=next;statsStatus='';refreshCollective();
+ }catch(error){
+  console.error('animal_counts read failed',error);
+  statsStatus='전체 집계를 불러오지 못했어요. 관리자에게 문의해 주세요.';
+  refreshCollective();
+ }
+}
+function initLive(){
+ cleanupLive();
+ getCounts();
+ if(!connected||demoMode)return;
+ // 가능하면 변경 이벤트 즉시 반영, 연결하지 못해도 아래 주기적 갱신은 유지합니다.
+ try{
+  const db=ensureClient();
+  if(db)subscription=db.channel('animal-counts-live')
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'animal_counts'},()=>getCounts())
+    .subscribe();
+ }catch(error){console.warn('realtime subscription unavailable, using polling',error);}
+ refreshTimer=setInterval(getCounts,5000);
+}
+async function registerResultOnce(primary){
+ if(demoMode){setSubmitStatus('시연 모드에서는 실제 결과가 집계되지 않아요.');return;}
+ if(localStorage.getItem(SUBMIT_STORAGE_KEY)){
+  setSubmitStatus('이 기기에서 이미 결과를 제출했어요. 다시 검사해도 통계에는 중복 반영되지 않아요.','already');
+  return;
+ }
+ if(!connected){
+  setSubmitStatus('통계 서버 연결 정보가 아직 설정되지 않았어요.','error');return;
+ }
+ if(isSubmitting)return;
+ isSubmitting=true;
+ setSubmitStatus('내 결과를 전체 통계에 반영하는 중이에요.');
+ try{
+  await apiRequest('/rpc/record_animal',{method:'POST',body:{p_animal:primary}});
+  localStorage.setItem(SUBMIT_STORAGE_KEY,'1');
+  setSubmitStatus('내 동물 유형 1개가 전체 결과에 반영됐어요!','success');
+  await getCounts();
+ }catch(error){
+  console.error('animal_counts submission failed',error);
+  setSubmitStatus('결과는 확인할 수 있지만 전체 통계 저장에 실패했어요. ('+String(error.message).slice(0,130)+')','error');
+ }finally{isSubmitting=false;}
 }
 
 // ===================== 캔버스로 실제 PNG 이미지 생성 =====================
