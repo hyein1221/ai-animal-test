@@ -47,15 +47,15 @@ function scrollTop(){window.scrollTo({top:0,behavior:'instant'});}
 function note(message){document.querySelector('.toast')?.remove();const n=document.createElement('div');n.className='toast';n.textContent=message;document.body.appendChild(n);setTimeout(()=>n.remove(),4500);}
 
 function showHome(){cleanupLive();selectedPrimary=null;ROOT.innerHTML=`<section class="content hero">
-  <div class="eyebrow">나를 발견하는 11개의 질문</div><h1>나는 AI를 만날 때<br><span class="accent">어떤 동물일까?</span></h1>
+  <h1>나는 AI를 만날 때<br><span class="accent">어떤 동물일까?</span></h1>
   <div class="subtitle">나의 AI 활용 동물 찾기</div>
   <p class="intro">여섯 동물과 함께, 나만의 AI 활용 방식을 발견해 보세요.<br>AI를 자주 사용해도, 아직 사용해 본 적이 없어도 괜찮아요!<br>각 상황에서 나의 모습과 가장 가까운 선택지를 골라보세요.<br>경험하지 않은 상황이라면 '나라면 어떻게 할까?'를 생각하며 선택하면 됩니다.</p>
-  <div class="hero-pets">${TYPES.map(t=>`<div class="hero-pet" style="--pet-bg:${t.light}">${iconPet(t)}<span>${t.short}</span></div>`).join('')}</div>
+  <div class="hero-pets">${TYPES.map(t=>`<div class="hero-pet" style="--pet-bg:${t.light}">${iconPet(t)}<span>${esc(t.name)}</span></div>`).join('')}</div>
   <p class="lead">정답은 없어요! AI를 많이 사용한다고 더 좋은 교사인 것은 아니에요.</p>
   <button class="button primary" id="start">테스트 시작하기 →</button>
   <p class="pill-label">약 5~7분 · 총 11문항 · 개인정보 입력 없이</p>
   <p class="disclaimer">이 테스트는 자기성찰을 위한 비공식적인 재미형 테스트이며, 개인의 역량이나 전문성을 평가하는 검사가 아닙니다.</p>
-  <button class="button text-btn" id="live-link">우리의 동물 분포만 보기 ↗</button>
+  <button class="button text-btn" id="live-link">함께 보는 결과 ↗</button>
   </section>`;
  document.getElementById('start').onclick=()=>{answers=Array(11).fill(null);current=0;showQuestion();};
  document.getElementById('live-link').onclick=showLiveOnly;
@@ -110,11 +110,11 @@ function showResult(){const {scores}=scoreAnswers(answers);const t=BY_ID[selecte
 function renderCollective(standalone){
  const total=TYPES.reduce((sum,t)=>sum+(counts[t.id]||0),0);
  const max=Math.max(1,...TYPES.map(t=>counts[t.id]||0));
- return `<section class="collective ${standalone?'live-only':''}" aria-label="전체 참여자 결과 분포"><div class="collective-head"><div class="eyebrow">모두 함께 보는 결과</div><h2>우리의 AI 동물 비눗방울 🫧</h2><p>한 동물당 방울 하나! 같은 유형이 늘어나면 방울이 더 커져요.</p><span class="live-pill">실시간 집계</span></div>
+ return `<section class="collective ${standalone?'live-only':''}" aria-label="전체 참여자 결과 분포"><div class="collective-head"><h2>우리의 AI 동물 비눗방울 🫧</h2>${connected && !demoMode?'<span class="live-pill">실시간 집계</span>':''}</div>
  <div class="status-line" id="status-line">${esc(statsStatus)}</div>
- <div class="bubbles" id="bubble-board">${TYPES.map((t,i)=>{const c=counts[t.id]||0;const size=54+Math.round(88*Math.sqrt(c/max));return `<div class="bubble-cell ${total&&c===max?'is-leader':''}"><div class="bubble" style="--bubble-tint:${t.tint};--bubble-size:${size}px;--float-dur:${3.2+i*.39}s" aria-label="${t.short} ${c}개 결과">${iconPet(t)}<span class="bubble-number">${c}개</span></div><div class="bubble-caption">${t.short}</div></div>`;}).join('')}</div>
+ <div class="bubbles" id="bubble-board">${TYPES.map((t,i)=>{const c=counts[t.id]||0;const size=54+Math.round(88*Math.sqrt(c/max));return `<div class="bubble-cell ${total&&c===max?'is-leader':''}"><div class="bubble" style="--bubble-tint:${t.tint};--bubble-size:${size}px;--float-dur:${3.2+i*.39}s" aria-label="${esc(t.name)} ${c}개 결과">${iconPet(t)}<span class="bubble-number">${c}개</span></div><div class="bubble-caption">${esc(t.name)}</div></div>`;}).join('')}</div>
  <div class="total-line">총 <span id="grand-total">${total}</span>개의 결과가 모였어요</div>
- <div class="stat-grid" id="stat-grid">${TYPES.map(t=>{const c=counts[t.id]||0;const pct=total?Math.round(c/total*100):0;return `<div class="stat-row"><div class="stat-name">${t.short}</div><div class="stat-track"><div class="stat-fill" style="--bar-color:${t.bar};width:${pct}%"></div></div><div class="stat-amount">${c}개 · ${pct}%</div></div>`;}).join('')}</div>
+ <div class="stat-grid" id="stat-grid">${TYPES.map(t=>{const c=counts[t.id]||0;const pct=total?Math.round(c/total*100):0;return `<div class="stat-row"><div class="stat-name">${esc(t.name)}</div><div class="stat-track"><div class="stat-fill" style="--bar-color:${t.bar};width:${pct}%"></div></div><div class="stat-amount">${c}개 · ${pct}%</div></div>`;}).join('')}</div>
  <p class="privacy-note">이름, 연락처, 개별 문항 응답은 수집하지 않아요. 대표 동물별 누적 결과 수만 집계해요.<br>동일한 브라우저에서는 중복 집계를 줄이지만, 사람 수를 정확히 식별하는 통계는 아니에요.</p>
  ${standalone?'<div class="actions"><button class="button secondary" id="live-home">처음으로 돌아가기 ←</button></div>':'<div class="actions"><button class="button outline small" id="large-live">전체 화면으로 크게 보기 ↗</button></div>'}</section>`;
 }
@@ -127,10 +127,10 @@ const connected=!!(CONFIG.supabaseUrl&&CONFIG.supabasePublishableKey&&window.sup
 function ensureClient(){if(!connected)return null;if(!client)client=window.supabase.createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});return client;}
 function cleanupLive(){if(refreshTimer)clearInterval(refreshTimer);refreshTimer=null;if(subscription&&client){client.removeChannel(subscription);subscription=null;}}
 async function getCounts(){if(demoMode){counts={squirrel:3,beaver:12,otter:8,owl:5,hedgehog:4,rabbit:2};statsStatus='시연용 숫자입니다. 실제 결과가 아니에요.';refreshCollective();return;}
- const db=ensureClient();if(!db){statsStatus='Supabase 연결 전입니다. 설정을 완료하면 실제 누적 결과가 보여요.';refreshCollective();return;}
+ const db=ensureClient();if(!db){statsStatus='';refreshCollective();return;}
  try{const {data,error}=await db.from('animal_counts').select('animal,total');if(error)throw error;
   const next=Object.fromEntries(TYPES.map(t=>[t.id,0]));for(const row of data||[]){if(Object.hasOwn(next,row.animal))next[row.animal]=Math.max(0,Number(row.total)||0);}counts=next;
-  statsStatus='참여 결과가 추가될 때마다 자동으로 갱신돼요.';refreshCollective();
+  statsStatus='';refreshCollective();
  }catch(e){console.error('stats load',e);statsStatus='집계를 불러오지 못했어요. Supabase 설정과 정책을 확인해 주세요.';refreshCollective();}
 }
 function initLive(){const db=ensureClient();if(!db&&!demoMode){getCounts();return;}getCounts();if(demoMode)return;
