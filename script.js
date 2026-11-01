@@ -210,7 +210,8 @@ async function registerResultOnce(primary){
   await apiRequest('/rpc/record_animal',{method:'POST',body:{p_animal:primary}});
   localStorage.setItem(SUBMIT_STORAGE_KEY,'1');
   setSubmitStatus('내 동물 유형 1개가 전체 결과에 반영됐어요!','success');
-  await getCounts();
+  // 저장 성공과 화면 새로고침 실패를 구분해 잘못된 저장 실패 메시지를 방지합니다.
+  try{await getCounts();}catch(refreshError){console.warn('Saved successfully, but count refresh failed',refreshError);}
  }catch(error){
   console.error('animal_counts submission failed',error);
   setSubmitStatus('결과는 확인할 수 있지만 전체 통계 저장에 실패했어요. ('+String(error.message).slice(0,130)+')','error');
