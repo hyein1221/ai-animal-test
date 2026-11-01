@@ -5,3 +5,5 @@
 @media(max-width:420px){.site-header{gap:8px}.brand-title{font-size:13px}.brand-detail{font-size:11px}.header-suffix{max-width:74px;font-size:10px}}
 
 .submission-status{margin:12px 0 6px;padding:10px 13px;border-radius:12px;background:#f2f0eb;color:#6c635f;text-align:center;font-size:12px;line-height:1.65;word-break:break-word}.submission-status[data-kind=success]{background:#eaf5ed;color:#28694b}.submission-status[data-kind=error]{background:#fff0e9;color:#9b4c3e}.submission-status[data-kind=already]{background:#f4f0e7;color:#73634d}
+
+.result-share-tip{font-size:12px;color:#88766c;line-height:1.75;text-align:center;margin:2px 0 20px;word-break:keep-all}
