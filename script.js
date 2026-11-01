@@ -37,7 +37,7 @@ let refreshTimer=null;
 let counts=Object.fromEntries(TYPES.map(t=>[t.id,0]));
 let statsStatus='';
 let demoMode=new URLSearchParams(location.search).has('demo');
-const SUBMIT_STORAGE_KEY='chae-ai-animal-counted-v1';
+const SUBMIT_STORAGE_KEY='chae-ai-animal-counted-v2';
 const ROOT=document.getElementById('app');
 
 // XSS 방지: 동물/질문은 고정된 배열이지만 텍스트는 항상 이스케이프.
