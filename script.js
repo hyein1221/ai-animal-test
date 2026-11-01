@@ -51,7 +51,7 @@ function showHome(){cleanupLive();selectedPrimary=null;ROOT.innerHTML=`<section 
   <div class="subtitle">나의 AI 활용 동물 찾기</div>
   <p class="intro">여섯 동물과 함께, 나만의 AI 활용 방식을 발견해 보세요.<br>AI를 자주 사용해도, 아직 사용해 본 적이 없어도 괜찮아요!<br>각 상황에서 나의 모습과 가장 가까운 선택지를 골라보세요.<br>경험하지 않은 상황이라면 '나라면 어떻게 할까?'를 생각하며 선택하면 됩니다.</p>
   <div class="hero-pets">${TYPES.map(t=>`<div class="hero-pet" style="--pet-bg:${t.light}">${iconPet(t)}<span>${esc(t.name)}</span></div>`).join('')}</div>
-  <p class="lead">정답은 없어요! AI를 많이 사용한다고 더 좋은 교사인 것은 아니에요.</p>
+  <p class="lead">정답은 없어요!</p>
   <button class="button primary" id="start">테스트 시작하기 →</button>
   <p class="pill-label">약 5~7분 · 총 11문항 · 개인정보 입력 없이</p>
   <p class="disclaimer">이 테스트는 자기성찰을 위한 비공식적인 재미형 테스트이며, 개인의 역량이나 전문성을 평가하는 검사가 아닙니다.</p>
