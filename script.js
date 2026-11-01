@@ -120,7 +120,7 @@ function renderCollective(standalone){
  <div class="bubbles" id="bubble-board">${TYPES.map((t,i)=>{const c=counts[t.id]||0;const size=54+Math.round(100*(1-Math.exp(-c/12)));return `<div class="bubble-cell ${total>0&&c===leaderCount?'is-leader':''}"><div class="bubble" style="--bubble-tint:${t.tint};--bubble-size:${size}px;--float-dur:${3.2+i*.39}s" aria-label="${esc(t.name)} ${c}개 결과">${iconPet(t)}<span class="bubble-number">${c}개</span></div><div class="bubble-caption">${esc(t.name)}</div></div>`;}).join('')}</div>
  <div class="total-line">총 <span id="grand-total">${total}</span>개의 결과가 모였어요</div>
  <div class="stat-grid" id="stat-grid">${TYPES.map(t=>{const c=counts[t.id]||0;const pct=total?Math.round(c/total*100):0;return `<div class="stat-row"><div class="stat-name">${esc(t.name)}</div><div class="stat-track"><div class="stat-fill" style="--bar-color:${t.bar};width:${pct}%"></div></div><div class="stat-amount">${c}개 · ${pct}%</div></div>`;}).join('')}</div>
- <p class="privacy-note">이름, 연락처, 개별 문항 응답은 수집하지 않아요. 대표 동물별 누적 결과 수만 집계해요.<br>동일한 브라우저에서는 중복 집계를 줄이지만, 사람 수를 정확히 식별하는 통계는 아니에요.</p>
+ <p class="privacy-note">이름, 연락처, 개별 문항 응답은 수집하지 않아요. 대표 동물별 누적 결과 수만 집계해요.</p>
  ${standalone?'<div class="actions"><button class="button secondary" id="live-home">처음으로 돌아가기 ←</button></div>':'<div class="actions"><button class="button outline small" id="large-live">전체 화면으로 크게 보기 ↗</button></div>'}</section>`;
 }
 function showLiveOnly(){cleanupLive();ROOT.innerHTML=`<div class="content separate-live"><div id="collective-slot">${renderCollective(true)}</div></div>`;document.getElementById('live-home').onclick=showHome;initLive();scrollTop();}
