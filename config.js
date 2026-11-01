@@ -6,5 +6,5 @@
  */
 window.ANIMAL_APP_CONFIG = {
   supabaseUrl: "",
-  supabasePublishableKey: ""
+  supabasePublishableKey: "sb_publishable_FoHzWH0mCUVvoXNV98v6sw_smnBznUZ"
 };
