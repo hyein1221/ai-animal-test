@@ -47,8 +47,8 @@ function scrollTop(){window.scrollTo({top:0,behavior:'instant'});}
 function note(message){document.querySelector('.toast')?.remove();const n=document.createElement('div');n.className='toast';n.textContent=message;document.body.appendChild(n);setTimeout(()=>n.remove(),4500);}
 
 function showHome(){cleanupLive();selectedPrimary=null;ROOT.innerHTML=`<section class="content hero">
-  <h1>나는 AI를 만날 때<br><span class="accent">어떤 동물일까?</span></h1>
-  <div class="subtitle">나의 AI 활용 동물 찾기</div>
+  <h1>AI를 활용하는 나,<br><span class="accent">어떤 동물과 닮았을까?</span></h1>
+  <div class="subtitle">나의 AI 활용 스타일 테스트</div>
   <p class="intro">여섯 동물과 함께, 나만의 AI 활용 방식을 발견해 보세요.<br>AI를 자주 사용해도, 아직 사용해 본 적이 없어도 괜찮아요!<br>각 상황에서 나의 모습과 가장 가까운 선택지를 골라보세요.<br>경험하지 않은 상황이라면 '나라면 어떻게 할까?'를 생각하며 선택하면 됩니다.</p>
   <div class="hero-pets">${TYPES.map(t=>`<div class="hero-pet" style="--pet-bg:${t.light}">${iconPet(t)}<span>${esc(t.name)}</span></div>`).join('')}</div>
   <p class="lead">정답은 없어요!</p>
@@ -62,7 +62,7 @@ function showHome(){cleanupLive();selectedPrimary=null;ROOT.innerHTML=`<section 
  scrollTop();
 }
 function showQuestion(){cleanupLive();const q=QUESTIONS[current];const count=QUESTIONS.length;
- ROOT.innerHTML=`<section class="content"><div class="quiz-top"><div class="progress-row"><span>나의 AI 활용 동물 찾기</span><span>${current+1} / ${count}</span></div><div class="progress-rail" aria-label="진행률 ${Math.round((current+1)/count*100)}%"><div class="progress-fill" style="width:${Math.round((current+1)/count*100)}%"></div></div></div>
+ ROOT.innerHTML=`<section class="content"><div class="quiz-top"><div class="progress-row"><span>AI 활용 스타일 테스트</span><span>${current+1} / ${count}</span></div><div class="progress-rail" aria-label="진행률 ${Math.round((current+1)/count*100)}%"><div class="progress-fill" style="width:${Math.round((current+1)/count*100)}%"></div></div></div>
  <div class="card question-box"><div class="question-label">Q${current+1}${q.score?' · 상황 속 나의 선택':' · 나의 생각'}</div>
  <h2 class="question-title">${esc(q.q)}</h2>${q.help?`<p class="question-help">${esc(q.help)}</p>`:''}
  <div class="options" role="radiogroup" aria-label="질문 ${current+1} 선택지">${q.options.map((opt,i)=>`<button type="button" class="option ${answers[current]===i?'selected':''}" role="radio" aria-checked="${answers[current]===i?'true':'false'}" data-choice="${i}"><span class="option-letter">${String.fromCharCode(65+i)}</span><span>${esc(opt)}</span></button>`).join('')}</div></div>
@@ -98,10 +98,13 @@ function showResult(){const {scores}=scoreAnswers(answers);const t=BY_ID[selecte
  <div class="secondary-traits">${second.map(id=>`<span class="trait-chip" style="--pet-bg:${BY_ID[id].light}">${iconPet(BY_ID[id])}<span>${esc(BY_ID[id].name)}</span></span>`).join('')}</div>
  <p class="body-text">${second.length>1?'보조 성향이 동점으로 나타났어요. 모두 같은 비중으로 살펴봐 주세요.':'대표 성향 외에도 또 다른 활용 관점이 함께 나타났어요.'}</p>
  </div><div class="reflection"><strong>어떤 동물이 나왔든 괜찮아요!</strong><p>AI를 활용하는 방식은 서로 달라도 괜찮아요. 중요한 것은 얼마나 자주 사용하는지가 아니라, 언제·왜·어떻게 활용할지 판단하는 것입니다.</p></div>
- <div class="actions"><button class="button" id="save-image">결과 이미지 저장하기 ↓</button><button class="button secondary" id="retest">다시 검사하기 ↺</button></div>
+ <div class="actions"><button class="button" id="share-result">결과 공유하기 ↗</button><button class="button secondary" id="save-image">결과 이미지 저장하기 ↓</button><button class="button outline" id="copy-result-link">결과 링크 복사 🔗</button><button class="button secondary" id="retest">다시 검사하기 ↺</button></div>
+ <p class="result-share-tip">결과를 공유하면 내 동물 유형을 친구들에게 보여줄 수 있어요. 모바일에서는 결과 이미지를 직접 공유할 수도 있어요.</p>
  <div class="submission-status" id="submission-status" role="status" aria-live="polite">전체 결과 반영 상태를 확인하고 있어요.</div>
  <div class="result-disclaimer">이 결과는 재미와 자기성찰을 위한 비공식 유형 테스트입니다.<br>개인의 AI 리터러시나 교사 전문성을 평가한 결과가 아닙니다.</div>
  <div id="collective-slot"></div></section>`;
+ document.getElementById('share-result').onclick=()=>shareResult(t,second);
+ document.getElementById('copy-result-link').onclick=()=>copyResultLink(t); 
  document.getElementById('save-image').onclick=()=>saveResultImage(t,second);
  document.getElementById('retest').onclick=()=>{answers=Array(11).fill(null);selectedPrimary=null;current=0;showHome();};
  document.getElementById('collective-slot').innerHTML=renderCollective(false);
@@ -218,31 +221,79 @@ async function registerResultOnce(primary){
  }finally{isSubmitting=false;}
 }
 
-// ===================== 캔버스로 실제 PNG 이미지 생성 =====================
+// ===================== 실제 PNG 이미지 / 결과별 링크 공유 =====================
+const SHARE_BASE='https://hyein1221.github.io/ai-animal-test/';
+function resultShareUrl(t){return SHARE_BASE+'share/'+encodeURIComponent(t.id)+'.html';}
+function resultShareText(t){return '나의 AI 활용 스타일은 '+t.name+'! 당신은 어떤 동물과 닮았을까요?';}
+async function copyText(text){
+ try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);return true;}}
+ catch(error){console.warn('Clipboard API failed; trying fallback',error);}
+ try{
+  const field=document.createElement('textarea');field.value=text;field.style.position='fixed';field.style.left='-9999px';
+  document.body.appendChild(field);field.select();
+  const copied=document.execCommand('copy');field.remove();return copied;
+ }catch(error){console.warn('Fallback clipboard failed',error);return false;}
+}
+async function copyResultLink(t){
+ const link=resultShareUrl(t);
+ if(await copyText(link))note('내 동물 결과 링크를 복사했어요! 카카오톡에 붙여넣어 공유해 보세요.');
+ else {note('링크 복사가 지원되지 않아요. 아래 공유 링크를 눌러 복사해 주세요.');}
+}
+async function shareResult(t,other){
+ const url=resultShareUrl(t);
+ const title=t.name+' | AI를 활용하는 나, 어떤 동물과 닮았을까?';
+ const text=resultShareText(t);
+ if(navigator.share && navigator.canShare && typeof File==='function'){
+  try{
+   const blob=await makeResultImage(t,other);
+   const file=new File([blob],'AI_활용_결과_'+t.short+'.png',{type:'image/png'});
+   if(navigator.canShare({files:[file]})){
+    // 파일 공유가 가능한 휴대폰에서는 결과 카드 PNG 자체를 첨부하고, 링크도 메시지에 담습니다.
+    await navigator.share({files:[file],title,text:text+'\n'+url});
+    return;
+   }
+  }catch(error){
+   if(error?.name==='AbortError')return;
+   console.warn('Image share unavailable; falling back to result link',error);
+  }
+ }
+ if(navigator.share){
+  try{await navigator.share({title,text,url});return;}
+  catch(error){if(error?.name==='AbortError')return;console.warn('Native link share unavailable',error);}
+ }
+ if(await copyText(url))note('내 동물 결과 링크를 복사했어요! 메신저에 붙여넣어 공유해 보세요.');
+ else note('결과 링크: '+url);
+}
+async function makeResultImage(t,other){
+ if(document.fonts?.ready)await document.fonts.ready;
+ const cv=document.createElement('canvas');cv.width=1080;cv.height=1350;const ctx=cv.getContext('2d');
+ ctx.fillStyle='#F7F6F5';ctx.fillRect(0,0,1080,1350);
+ const rect=(x,y,w,h,r,c)=>{ctx.fillStyle=c;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();};
+ rect(55,55,970,1240,46,'#FFFDFC');rect(88,88,904,22,10,t.bar);
+ ctx.textAlign='center';ctx.fillStyle='#9C735D';ctx.font='bold 28px sans-serif';ctx.fillText('AI를 활용하는 나, 어떤 동물과 닮았을까?',540,172,900);
+ ctx.font='bold 35px sans-serif';ctx.fillStyle='#806C63';ctx.fillText('나의 AI 활용 동물은?',540,241);
+ const image=new Image();image.src=img(t.id);await new Promise((resolve,reject)=>{if(image.complete&&image.naturalWidth)resolve();else {image.onload=resolve;image.onerror=reject;}});
+ const box={x:270,y:265,w:540,h:545};
+ const ratio=Math.min(box.w/image.width,box.h/image.height);
+ ctx.drawImage(image,box.x+(box.w-image.width*ratio)/2,box.y+(box.h-image.height*ratio)/2,image.width*ratio,image.height*ratio);
+ ctx.fillStyle='#493C3C';ctx.font='bold 60px sans-serif';ctx.fillText(t.name,540,865);
+ ctx.font='bold 31px sans-serif';ctx.fillStyle='#9A735E';wrapCanvas(ctx,'“'+t.quote+'”',540,930,870,40);
+ rect(140,1004,800,100,25,t.light);ctx.font='bold 27px sans-serif';ctx.fillStyle='#5C514C';
+ ctx.fillText('나의 강점  ·  '+t.strength,540,1065);
+ ctx.font='bold 25px sans-serif';ctx.fillStyle='#665C56';ctx.fillText('보조 성향: '+other.map(id=>BY_ID[id].short).join(' · '),540,1170);
+ ctx.font='22px sans-serif';ctx.fillStyle='#877F7B';ctx.fillText('정답 없는, 우리만의 AI 활용 이야기',540,1242);
+ const blob=await new Promise(resolve=>cv.toBlob(resolve,'image/png'));
+ if(!blob)throw new Error('png export failed');
+ return blob;
+}
 async function saveResultImage(t,other){
  try{
-  if(document.fonts?.ready)await document.fonts.ready;
-  const cv=document.createElement('canvas');cv.width=1080;cv.height=1350;const ctx=cv.getContext('2d');
-  ctx.fillStyle='#F7F6F5';ctx.fillRect(0,0,1080,1350);
-  const rect=(x,y,w,h,r,c)=>{ctx.fillStyle=c;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();};
-  rect(55,55,970,1240,46,'#FFFDFC');rect(88,88,904,22,10,t.bar);
-  ctx.textAlign='center';ctx.fillStyle='#9C735D';ctx.font='bold 28px sans-serif';ctx.fillText('나의 AI 활용 동물 찾기',540,172);
-  ctx.font='bold 35px sans-serif';ctx.fillStyle='#806C63';ctx.fillText('나의 AI 활용 동물은?',540,241);
-  const image=new Image();image.src=img(t.id);await new Promise((resolve,reject)=>{if(image.complete&&image.naturalWidth)resolve();else {image.onload=resolve;image.onerror=reject;}});
-  const box={x:270,y:265,w:540,h:545};
-  const ratio=Math.min(box.w/image.width,box.h/image.height);
-  ctx.drawImage(image,box.x+(box.w-image.width*ratio)/2,box.y+(box.h-image.height*ratio)/2,image.width*ratio,image.height*ratio);
-  ctx.fillStyle='#493C3C';ctx.font='bold 60px sans-serif';ctx.fillText(t.name,540,865);
-  ctx.font='bold 31px sans-serif';ctx.fillStyle='#9A735E';wrapCanvas(ctx,`“${t.quote}”`,540,930,870,40);
-  rect(140,1004,800,100,25,t.light);ctx.font='bold 27px sans-serif';ctx.fillStyle='#5C514C';
-  ctx.fillText('나의 강점  ·  '+t.strength,540,1065);
-  ctx.font='bold 25px sans-serif';ctx.fillStyle='#665C56';ctx.fillText('보조 성향: '+other.map(id=>BY_ID[id].short).join(' · '),540,1170);
-  ctx.font='22px sans-serif';ctx.fillStyle='#877F7B';ctx.fillText('정답 없는, 우리만의 AI 활용 이야기',540,1242);
-  const blob=await new Promise(resolve=>cv.toBlob(resolve,'image/png'));
-  if(!blob)throw new Error('png export failed');
-  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`나의_AI_활용_동물_${t.short}.png`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);
+  const blob=await makeResultImage(t,other);
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='나의_AI_활용_동물_'+t.short+'.png';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);
   note('PNG 저장을 요청했어요. 모바일에서 자동 저장되지 않으면 다운로드 폴더 또는 브라우저의 저장 메뉴를 확인해 주세요.');
- }catch(err){console.error('image save',err);note('이미지를 만들지 못했어요. 이미지 파일이 모두 업로드됐는지 확인해 주세요.');}
+ }catch(error){console.error('image save',error);note('이미지를 만들지 못했어요. 이미지 파일이 모두 업로드됐는지 확인해 주세요.');}
 }
 function wrapCanvas(ctx,text,x,y,maxWidth,lineHeight){let line='';for(const c of Array.from(text)){const tryLine=line+c;if(ctx.measureText(tryLine).width>maxWidth&&line){ctx.fillText(line,x,y);y+=lineHeight;line=c;}else{line=tryLine;}}if(line)ctx.fillText(line,x,y);}
 
